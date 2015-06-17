@@ -1,0 +1,49 @@
+body {
+	background: #fff;
+	font-size: 16px;
+}
+
+#root {
+	background: url(/s/ml-logo.png);
+	background-size: contain;
+	background-repeat: no-repeat;
+	width: 434px;
+	margin: 50px auto 0 auto;
+	padding-top: 235px;
+}
+
+#expl {
+	margin: 32px auto;
+	color: #666;
+}
+
+#email {
+	width: 400px;
+	border: 1px solid #eee;
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+	padding: 16px;
+}
+
+#first, #last {
+	width: 183px;
+	border: 1px solid #eee;
+	padding: 16px;
+}
+
+button {
+	border: 1px solid #eee;
+	border-bottom-left-radius: 6px;
+	border-bottom-right-radius: 6px;
+	padding: 16px;
+	background: #333;
+	color: #fff;
+	width: 434px;
+}
+
+button:hover {
+	color: #fe8919;
+}
+
+#load {
+}
