@@ -3,6 +3,7 @@ package mitml
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -18,9 +19,10 @@ import (
 )
 
 const (
-	inviteUri   = "/api/users.admin.invite"
-	kindRequest = "request"
-	configFile  = "config.json"
+	inviteUri         = "/api/users.admin.invite"
+	kindRequest       = "request"
+	configFile        = "config.json"
+	avoidCallingSlack = true
 )
 
 var config struct {
@@ -46,6 +48,15 @@ type Request struct {
 	Invited bool
 }
 
+type InviteErr struct {
+	Err error
+	Msg string
+}
+
+func (e *InviteErr) Error() string {
+	return e.Err.Error()
+}
+
 func (r *Request) Store(ctx appengine.Context, key *datastore.Key) (*datastore.Key, error) {
 	if key == nil {
 		key = datastore.NewIncompleteKey(ctx, kindRequest, nil)
@@ -53,35 +64,45 @@ func (r *Request) Store(ctx appengine.Context, key *datastore.Key) (*datastore.K
 	return datastore.Put(ctx, key, r)
 }
 
-func (r *Request) Invite(ctx appengine.Context) error {
+func (r *Request) Invite(ctx appengine.Context) *InviteErr {
 	res, err := urlfetch.Client(ctx).PostForm(inviteUrl(), url.Values{
 		"email":      {r.Email},
 		"first_name": {r.First},
 		"last_name":  {r.Last},
 		"set_active": {"true"},
 		"_attempts":  {"1"},
-		"token":      {apiToken},
+		"token":      {config.Slack.Token},
 	})
 	if err != nil {
-		return err
+		return &InviteErr{
+			Err: err,
+			Msg: "Slack Error",
+		}
 	}
 	defer res.Body.Close()
 
 	var rsp struct {
-		Ok bool `json:"ok"`
+		Ok    bool   `json:"ok"`
+		Error string `json:"error"`
 	}
 
 	var buf bytes.Buffer
 
 	if err := json.NewDecoder(io.TeeReader(res.Body, &buf)).Decode(&rsp); err != nil {
-		return err
+		return &InviteErr{
+			Err: err,
+			Msg: "Slack Error",
+		}
 	}
 
 	if !rsp.Ok {
-		return fmt.Errorf("invite error: %s", buf.String())
+		return &InviteErr{
+			Err: errors.New(rsp.Error),
+			Msg: rsp.Error,
+		}
 	}
 
-	return err
+	return nil
 }
 
 func inviteUrl() string {
@@ -140,7 +161,16 @@ func init() {
 	}
 
 	http.HandleFunc("/api/v1/invite-me", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w,
+				http.StatusText(http.StatusMethodNotAllowed),
+				http.StatusMethodNotAllowed)
+			return
+		}
+
 		email := r.FormValue("email")
+		first := r.FormValue("first")
+		last := r.FormValue("last")
 
 		ctx := appengine.NewContext(r)
 
@@ -153,18 +183,25 @@ func init() {
 
 		req := Request{
 			Email: email,
-			First: r.FormValue("first"),
-			Last:  r.FormValue("last"),
+			First: first,
+			Last:  last,
 			Time:  time.Now(),
 		}
 
-		if t == EmailApproved {
+		if t == EmailApproved && !avoidCallingSlack {
 			if err := req.Invite(ctx); err != nil {
-				WriteJsonError(w, fmt.Sprintf("%s", err))
+				ctx.Errorf("email=%s, first=%s, last=%s, error=%s",
+					email,
+					first,
+					last,
+					err.Error())
+				WriteJsonError(w, fmt.Sprintf("%s", err.Msg))
 				return
 			}
 
 			req.Invited = true
+		} else {
+			// email admin for approval
 		}
 
 		if _, err := req.Store(ctx, nil); err != nil {
@@ -172,6 +209,7 @@ func init() {
 			return
 		}
 
+		time.Sleep(5 * time.Second)
 		WriteJsonSuccess(w)
 	})
 }

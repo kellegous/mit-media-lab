@@ -23,19 +23,21 @@ body {
 	border-top-left-radius: 6px;
 	border-top-right-radius: 6px;
 	padding: 16px;
+	color: #333;
 }
 
 #first, #last {
 	width: 183px;
 	border: 1px solid #eee;
 	padding: 16px;
+	color: #333;
 }
 
 button {
 	border: 1px solid #eee;
 	border-bottom-left-radius: 6px;
 	border-bottom-right-radius: 6px;
-	padding: 16px;
+	padding: 20px;
 	background: #333;
 	color: #fff;
 	width: 434px;
@@ -45,5 +47,21 @@ button:hover {
 	color: #fe8919;
 }
 
-#load {
+button:disabled {
+	background-color: #999;
+	color: #666;
+}
+
+#busy {
+	border-radius: 6px;
+	background: #eee;
+}
+
+#done {
+}
+
+#done.ok {
+}
+
+#done.no {
 }

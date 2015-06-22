@@ -17,4 +17,6 @@ file 'dep/go_appengine' => sdk_file do |t|
     sh 'touch', t.name
 end
 
-task :default => 'dep/go_appengine'
+task :serve => ['dep/go_appengine'] do
+	sh 'dep/go_appengine/goapp', 'serve', 'mitml'
+end
