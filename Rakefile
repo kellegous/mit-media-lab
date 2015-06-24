@@ -17,6 +17,18 @@ file 'dep/go_appengine' => sdk_file do |t|
     sh 'touch', t.name
 end
 
+task :test => ['dep/go_appengine'] do
+	s = Process.wait Process.spawn({},
+		'../dep/go_appengine/goapp',
+		'test',
+		:chdir=> 'mitml')
+	fail "command status: #{s}" unless $?.exitstatus == 0
+end
+
 task :serve => ['dep/go_appengine'] do
 	sh 'dep/go_appengine/goapp', 'serve', 'mitml'
+end
+
+task :deploy => ['dep/go_appengine'] do
+	sh 'dep/go_appengine/goapp', 'deploy', 'mitml'
 end
