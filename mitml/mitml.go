@@ -111,6 +111,7 @@ func (r *Request) Parse(txt, channelId, channelName, userId, userName string) er
 	r.ChannelName = channelName
 	r.UserId = userId
 	r.UserName = userName
+	r.Time = time.Now()
 	return nil
 }
 
