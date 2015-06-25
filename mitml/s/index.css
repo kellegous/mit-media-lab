@@ -7,10 +7,80 @@ body {
 	background: url(/s/ml-logo.png);
 	background-size: contain;
 	background-repeat: no-repeat;
-	background-position: center;
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
+	width: 434px;
+	margin: 50px auto 0 auto;
+	padding-top: 235px;
+}
+
+#expl {
+	margin: 32px auto;
+	color: #666;
+}
+
+#email, #first, #last {
+	outline: none;
+}
+
+#email:focus, #first:focus, #last:focus {
+	background-color: #f6f6f6;
+}
+
+#email {
+	width: 400px;
+	border: 1px solid #eee;
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+	padding: 16px;
+	color: #333;
+}
+
+#first, #last {
+	width: 183px;
+	border: 1px solid #eee;
+	padding: 16px;
+	color: #333;
+}
+
+button {
+	border: 1px solid #eee;
+	border-bottom-left-radius: 6px;
+	border-bottom-right-radius: 6px;
+	padding: 20px;
+	background: #333;
+	color: #fff;
+	width: 434px;
+}
+
+button:hover {
+	color: #fe8919;
+}
+
+button:disabled {
+	background-color: #999;
+	color: #666;
+}
+
+#busy {
+	border-radius: 6px;
+	background: #eee;
+}
+
+#done {
+	padding: 0 20px;
+	margin: 20px 0;
+	height: 0;
+	color: #666;
+	overflow: hidden;
+	line-height: 60px;
+	transition: height 200ms ease-in-out;
+}
+
+#done.ok {
+	background: #cfc;
+	height: 60px;
+}
+
+#done.no {
+	background: #fcc;
+	height: 60px;
 }

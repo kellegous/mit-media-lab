@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"appengine"
 	"appengine/datastore"
 	"appengine/urlfetch"
+	"appengine/user"
 )
 
 const (
@@ -38,13 +40,16 @@ type Request struct {
 	UserId      string
 	UserName    string
 	Time        time.Time
+	Invited     bool
+	Succeeded   bool
 }
 
-func (r *Request) Store(ctx appengine.Context) (*datastore.Key, error) {
-	return datastore.Put(
-		ctx,
-		datastore.NewIncompleteKey(ctx, kindRequest, nil),
-		r)
+func (r *Request) Store(ctx appengine.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key == nil {
+		key = datastore.NewIncompleteKey(ctx, kindRequest, nil)
+	}
+
+	return datastore.Put(ctx, key, r)
 }
 
 func inviteUrl() string {
@@ -113,6 +118,13 @@ func (r *Request) Parse(txt, channelId, channelName, userId, userName string) er
 	r.UserName = userName
 	r.Time = time.Now()
 	return nil
+}
+
+func (r *Request) Set(email, first, last string) {
+	r.Email = email
+	r.First = first
+	r.Last = last
+	r.Time = time.Now()
 }
 
 func LoadConfig() error {
@@ -210,7 +222,7 @@ func parseNames(txt string) (string, string) {
 	return all[0], strings.Join(all[1:], " ")
 }
 
-func writeError(w http.ResponseWriter, err error) {
+func writeErrorAsText(w http.ResponseWriter, err error) {
 	if _, err := fmt.Fprintf(w,
 		"Oh boy, that didn't work. As far as I can tell it was because %s",
 		err); err != nil {
@@ -218,12 +230,33 @@ func writeError(w http.ResponseWriter, err error) {
 	}
 }
 
-func writeSuccess(w http.ResponseWriter, req *Request) {
+func writeOkAsText(w http.ResponseWriter, req *Request) {
 	if _, err := fmt.Fprintf(w,
 		"Done. %s should get an email right ... about ... now!",
 		req.Email); err != nil {
 		log.Panic(err)
 	}
+}
+
+func writeJson(w http.ResponseWriter, data interface{}, status int) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Panic(err)
+	}
+}
+
+func writeErrorAsJson(w http.ResponseWriter, err error) {
+	writeJson(w, map[string]interface{}{
+		"ok":    false,
+		"error": err.Error(),
+	}, http.StatusOK)
+}
+
+func writeOkAsJson(w http.ResponseWriter) {
+	writeJson(w, map[string]bool{
+		"ok": true,
+	}, http.StatusOK)
 }
 
 func InviteAlum(w http.ResponseWriter, r *http.Request) {
@@ -251,21 +284,99 @@ func InviteAlum(w http.ResponseWriter, r *http.Request) {
 		r.FormValue("channel_name"),
 		r.FormValue("user_id"),
 		r.FormValue("user_name")); err != nil {
-		writeError(w, err)
+		writeErrorAsText(w, err)
 		return
 	}
 
-	if _, err := req.Store(ctx); err != nil {
-		writeError(w, err)
-		return
-	}
-
+	req.Invited = true
 	if err := req.Invite(ctx); err != nil {
-		writeError(w, err)
+		req.Succeeded = false
+		writeErrorAsText(w, err)
+	} else {
+		req.Succeeded = true
+		writeOkAsText(w, &req)
+	}
+
+	if _, err := req.Store(ctx, nil); err != nil {
+		log.Panic(err)
+	}
+}
+
+func InviteMe(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	if r.Method != "POST" {
+		http.Error(w,
+			http.StatusText(http.StatusMethodNotAllowed),
+			http.StatusMethodNotAllowed)
 		return
 	}
 
-	writeSuccess(w, &req)
+	email := strings.TrimSpace(r.FormValue("email"))
+
+	if !isEmailValid(email) {
+		writeErrorAsJson(w, errors.New("invalid email"))
+		return
+	}
+
+	var req Request
+
+	req.Set(email,
+		strings.TrimSpace(r.FormValue("first")),
+		strings.TrimSpace(r.FormValue("last")))
+
+	if _, err := req.Store(ctx, nil); err != nil {
+		writeErrorAsJson(w, err)
+	} else {
+		writeOkAsJson(w)
+	}
+
+	// TODO(knorton): send an email
+}
+
+func ApproveRequest(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	if r.Method != "POST" {
+		http.Error(w,
+			http.StatusText(http.StatusMethodNotAllowed),
+			http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !user.IsAdmin(ctx) {
+		http.Error(w,
+			http.StatusText(http.StatusForbidden),
+			http.StatusForbidden)
+		return
+	}
+
+	id, err := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	key := datastore.NewKey(ctx, kindRequest, "", id, nil)
+
+	var req Request
+	if err := datastore.Get(ctx, key, &req); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	req.Invited = true
+	if err := req.Invite(ctx); err != nil {
+		writeErrorAsJson(w, err)
+		return
+	}
+
+	req.Succeeded = true
+	writeOkAsJson(w)
+
+	if _, err := req.Store(ctx, key); err != nil {
+		log.Panic(err)
+	}
 }
 
 func init() {
@@ -274,4 +385,5 @@ func init() {
 	}
 
 	http.HandleFunc("/api/v1/invite-alum", InviteAlum)
+	http.HandleFunc("/api/v1/invite-me", InviteMe)
 }
