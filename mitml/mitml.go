@@ -13,6 +13,7 @@ import (
 
 	"appengine"
 	"appengine/datastore"
+	"appengine/mail"
 	"appengine/urlfetch"
 	"appengine/user"
 )
@@ -301,6 +302,16 @@ func InviteAlum(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func sendEmail(ctx appengine.Context, email, first, last string) error {
+	u := "https://mit-media-lab.appspot.com/admin"
+	return mail.SendToAdmins(ctx, &mail.Message{
+		Sender:  "MIT Media Lab Slack <kellegous@gmail.com>",
+		Subject: fmt.Sprintf("%s wants an invite.", email),
+		Body: fmt.Sprintf(
+			"Name: %s %s\nEmail: %s\n%s", first, last, email, u),
+	})
+}
+
 func InviteMe(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
@@ -312,6 +323,8 @@ func InviteMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	email := strings.TrimSpace(r.FormValue("email"))
+	first := strings.TrimSpace(r.FormValue("first"))
+	last := strings.TrimSpace(r.FormValue("last"))
 
 	if !isEmailValid(email) {
 		writeErrorAsJson(w, errors.New("invalid email"))
@@ -320,9 +333,7 @@ func InviteMe(w http.ResponseWriter, r *http.Request) {
 
 	var req Request
 
-	req.Set(email,
-		strings.TrimSpace(r.FormValue("first")),
-		strings.TrimSpace(r.FormValue("last")))
+	req.Set(email, first, last)
 
 	if _, err := req.Store(ctx, nil); err != nil {
 		writeErrorAsJson(w, err)
@@ -330,7 +341,9 @@ func InviteMe(w http.ResponseWriter, r *http.Request) {
 		writeOkAsJson(w)
 	}
 
-	// TODO(knorton): send an email
+	if err := sendEmail(ctx, email, first, last); err != nil {
+		log.Panic(err)
+	}
 }
 
 func ApproveRequest(w http.ResponseWriter, r *http.Request) {
