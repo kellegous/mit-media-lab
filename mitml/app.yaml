@@ -14,6 +14,11 @@ handlers:
   static_files: index.html
   upload: index.html
 
+- url: /admin
+  static_files: admin.html
+  upload: admin.html
+  login: admin
+
 - url: /s
   static_dir: s
 

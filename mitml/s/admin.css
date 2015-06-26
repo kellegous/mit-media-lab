@@ -1,0 +1,62 @@
+body {
+	background: #fff;
+	font-size: 16px;
+	color: #333;
+	font-family: 'Open Sans', sans-serif;
+}
+
+#root {
+	width: 800px;
+	margin: 20px auto;
+}
+
+#root>h1 {
+	font-size: 16px;
+	padding: 8px 16px;
+	border-bottom: 1px solid #eee;
+}
+
+#reqs {
+}
+
+#reqs>.req {
+	padding: 16px 0 16px 16px;
+	position: relative;
+}
+#reqs>.req.o {
+	background-color: #f9f9f9;
+}
+
+.req>.invite {
+	width: 20px;
+	height: 20px;
+	border-radius: 20px;
+	background-color: #f6f6f6;
+	border: 1px solid #ccc;
+	position: absolute;
+	right: 16px;
+	cursor: pointer;
+}
+.req>.invite:hover {
+	background-color: #eee;
+}
+.req>.invite.ok {
+	background-color: #cfc;
+}
+.req>.invite.no {
+	background-color: #fcc;
+}
+
+.req>.name {
+	display: inline-block;
+	width: 250px;
+}
+
+.req>.email {
+	display: inline-block;
+	width: 300px;
+}
+
+.req>.time {
+	color: #999;
+}

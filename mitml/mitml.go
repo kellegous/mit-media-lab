@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -351,13 +350,11 @@ func ApproveRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	key, err := datastore.DecodeKey(r.FormValue("key"))
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-
-	key := datastore.NewKey(ctx, kindRequest, "", id, nil)
 
 	var req Request
 	if err := datastore.Get(ctx, key, &req); err != nil {
@@ -367,16 +364,50 @@ func ApproveRequest(w http.ResponseWriter, r *http.Request) {
 
 	req.Invited = true
 	if err := req.Invite(ctx); err != nil {
+		req.Succeeded = false
 		writeErrorAsJson(w, err)
-		return
+	} else {
+		req.Succeeded = true
+		writeOkAsJson(w)
 	}
-
-	req.Succeeded = true
-	writeOkAsJson(w)
 
 	if _, err := req.Store(ctx, key); err != nil {
 		log.Panic(err)
 	}
+}
+
+type fetchRequestsRsp struct {
+	Key     *datastore.Key
+	Request *Request
+}
+
+func FetchRequests(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	if !user.IsAdmin(ctx) {
+		http.Error(w,
+			http.StatusText(http.StatusForbidden),
+			http.StatusForbidden)
+		return
+	}
+
+	var reqs []*fetchRequestsRsp
+	for t := datastore.NewQuery(kindRequest).Order("-Time").Run(ctx); ; {
+		req := &Request{}
+		key, err := t.Next(req)
+		if err == datastore.Done {
+			break
+		} else if err != nil {
+			log.Panic(err)
+		}
+
+		reqs = append(reqs, &fetchRequestsRsp{
+			Key:     key,
+			Request: req,
+		})
+	}
+
+	writeJson(w, reqs, http.StatusOK)
 }
 
 func init() {
@@ -386,4 +417,8 @@ func init() {
 
 	http.HandleFunc("/api/v1/invite-alum", InviteAlum)
 	http.HandleFunc("/api/v1/invite-me", InviteMe)
+
+	// admin
+	http.HandleFunc("/api/v1/approve-request", ApproveRequest)
+	http.HandleFunc("/api/v1/requests", FetchRequests)
 }
