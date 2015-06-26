@@ -4,6 +4,15 @@ body {
 	font-family: 'Open Sans', sans-serif;	
 }
 
+a {
+	text-decoration: underline;
+	color: #666;
+}
+
+a:hover {
+	color: #fe8919;
+}
+
 #root {
 	background: url(/s/ml-logo.png);
 	background-size: contain;
@@ -14,6 +23,11 @@ body {
 }
 
 #expl {
+	margin: 32px auto;
+	color: #666;
+}
+
+#fact {
 	margin: 32px auto;
 	color: #666;
 }
