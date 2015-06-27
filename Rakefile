@@ -5,8 +5,9 @@ sdk_url = 'https://storage.googleapis.com/appengine-sdks/featured/go_appengine_s
 sdk_file = "dep/#{File.basename sdk_url}"
 
 def get_version()
-	v = `git tag`.strip
-	v[1..v.length].rjust(4, '0')
+	v = `git describe`
+	g = v.scan(/v(\d+)-(\d+)/)[0]
+	return g[0].to_i + g[1].to_i
 end
 
 file 'dep' do |t|
@@ -18,10 +19,10 @@ file sdk_file => 'dep' do |t|
     sh 'curl', '-o', t.name, sdk_url
 end
 
-file 'mitml/app.yaml' => ['cfg/app.yaml'] do |t|
+task :app do |t|
 	app = YAML.load(IO.read('cfg/app.yaml'))
 	app['version'] = get_version
-	File.open(t.name, 'w') { |w|
+	File.open('mitml/app.yaml', 'w') { |w|
 		w.write(app.to_yaml)
 	}
 end
@@ -39,11 +40,11 @@ task :test => ['dep/go_appengine'] do
 	fail "command status: #{s}" unless $?.exitstatus == 0
 end
 
-task :serve => ['dep/go_appengine', 'mitml/app.yaml'] do
+task :serve => ['dep/go_appengine', :app] do
 	sh 'dep/go_appengine/goapp', 'serve', 'mitml'
 end
 
-task :deploy => ['dep/go_appengine', 'mitml/app.yaml'] do
+task :deploy => ['dep/go_appengine', :app] do
 	sh 'dep/go_appengine/goapp', 'deploy', 'mitml'
 end
 
