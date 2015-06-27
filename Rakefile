@@ -12,6 +12,9 @@ file sdk_file => 'dep' do |t|
     sh 'curl', '-o', t.name, sdk_url
 end
 
+file 'mitml/app.yaml' => ['cfg/app.yaml'] do |t|
+end
+
 file 'dep/go_appengine' => sdk_file do |t|
     sh 'unzip', sdk_file, '-d', 'dep'
     sh 'touch', t.name

@@ -49,14 +49,15 @@ body {
 
 .req>.name {
 	display: inline-block;
-	width: 250px;
+	width: 200px;
 }
 
 .req>.email {
 	display: inline-block;
-	width: 300px;
+	width: 250px;
 }
 
 .req>.time {
+	display: inline-block;
 	color: #999;
 }
