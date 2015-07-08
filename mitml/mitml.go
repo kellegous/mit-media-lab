@@ -259,6 +259,15 @@ func writeOkAsJson(w http.ResponseWriter) {
 	}, http.StatusOK)
 }
 
+func boolFrom(v string) bool {
+	v = strings.ToLower(v)
+	switch v {
+	case "yes", "true", "1":
+		return true
+	}
+	return false
+}
+
 func InviteAlum(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
@@ -288,13 +297,15 @@ func InviteAlum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.Invited = true
-	if err := req.Invite(ctx); err != nil {
-		req.Succeeded = false
-		writeErrorAsText(w, err)
-	} else {
-		req.Succeeded = true
-		writeOkAsText(w, &req)
+	if !boolFrom(r.FormValue("dry_run")) {
+		req.Invited = true
+		if err := req.Invite(ctx); err != nil {
+			req.Succeeded = false
+			writeErrorAsText(w, err)
+		} else {
+			req.Succeeded = true
+			writeOkAsText(w, &req)
+		}
 	}
 
 	if _, err := req.Store(ctx, nil); err != nil {

@@ -61,3 +61,7 @@ body {
 	display: inline-block;
 	color: #999;
 }
+.req>.by {
+	color: #999;
+	font-size: 14px;
+}

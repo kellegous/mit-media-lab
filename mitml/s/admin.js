@@ -68,6 +68,9 @@ var main = function() {
 			$e('span').addClass('time')
 				.text(formatTime(new Date(Date.parse(req.Request.Time))))
 				.appendTo($req);
+			$e('div').addClass('by')
+				.text('invited by ' + (req.Request.UserName || '(self)'))
+				.appendTo($req);
 
 			if (req.Request.Invited) {
 				$b.addClass(req.Request.Succeeded ? 'ok' : 'no');
